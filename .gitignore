@@ -1,0 +1,22 @@
+# Gradle
+.gradle/
+build/
+
+# The built jar is published as a release asset, not committed.
+*.jar
+!gradle/wrapper/gradle-wrapper.jar
+
+# IDE
+.idea/
+*.iml
+.vscode/
+.classpath
+.project
+.settings/
+
+# OS
+.DS_Store
+
+# Local config that may contain real endpoints or tokens
+gravitino.conf
+*.local.conf

@@ -1,0 +1,58 @@
+{
+    "specversion": "1.0",
+    "id": "b01a788c-ae89-4040-aee0-22fe76317186",
+    "source": "https://gravitino.test/smoke",
+    "type": "org.apache.gravitino.table.created",
+    "time": "2026-07-13T22:58:41.400Z",
+    "dataschema": "https://gravitino.apache.org/schemas/catalog-event/v1.json",
+    "datacontenttype": "application/json",
+    "subject": "enterprise.analytics.sales.daily_orders",
+    "sequence": 1,
+    "actor": "dana.okafor@example.com",
+    "actoraddress": "unknown",
+    "eventsource": "gravitino_server",
+    "metalake": "enterprise",
+    "catalog": "analytics",
+    "data": {
+        "entityType": "table",
+        "fqn": "enterprise.analytics.sales.daily_orders",
+        "name": "daily_orders",
+        "provider": "lakehouse-iceberg",
+        "comment": "Daily order totals by customer",
+        "columns": [
+            {
+                "name": "order_date",
+                "type": "date",
+                "comment": "Business date",
+                "nullable": false,
+                "autoIncrement": false,
+                "position": 0
+            },
+            {
+                "name": "customer_id",
+                "type": "string",
+                "comment": "Customer key",
+                "nullable": false,
+                "autoIncrement": false,
+                "position": 1
+            },
+            {
+                "name": "order_total",
+                "type": "decimal(18,2)",
+                "comment": "Order total, USD",
+                "nullable": true,
+                "autoIncrement": false,
+                "position": 2
+            }
+        ],
+        "properties": {
+            "provider": "lakehouse-iceberg",
+            "location": "s3://example-lake/sales/daily_orders",
+            "classification": "internal"
+        },
+        "owner": "analytics-eng",
+        "createdAt": "2026-02-04T09:12:44Z",
+        "lastModifiedAt": "2026-07-13T18:42:11Z",
+        "lastModifiedBy": "dana.okafor@example.com"
+    }
+}

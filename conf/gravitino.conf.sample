@@ -1,0 +1,71 @@
+# ---------------------------------------------------------------------------
+# Gravitino event publisher
+#
+# Every property below the listener name is passed to the plugin with the
+# prefix stripped, so `gravitino.eventListener.eventPublisher.url` arrives at
+# the plugin as `url`.
+#
+# The listener name is arbitrary. `eventPublisher` is used here; anything
+# works, as long as it matches across every line below.
+# ---------------------------------------------------------------------------
+
+gravitino.eventListener.names = eventPublisher
+gravitino.eventListener.eventPublisher.class = com.datastrato.gravitino.eventpublisher.EventPublisherListener
+
+# --- Identity of this emitter -----------------------------------------------
+# A stable URI for this Gravitino server. Appears as the CloudEvents `source`.
+# Consumers fed by more than one server deduplicate on (source, id), so this
+# must be unique per server and must not change across restarts.
+gravitino.eventListener.eventPublisher.source = https://gravitino.example.internal/prod-us-east-1
+
+# --- Transport ---------------------------------------------------------------
+# http today. The payload is transport-independent, so a future kafka or jdbc
+# transport emits the identical body; only this line and the transport-specific
+# properties below it would change.
+gravitino.eventListener.eventPublisher.transport = http
+gravitino.eventListener.eventPublisher.url = https://business-catalog.example.internal/api/v1/ingest
+
+# --- Authentication (required) -----------------------------------------------
+# One of: oauth2, mtls, bearer. There is no unauthenticated mode.
+gravitino.eventListener.eventPublisher.auth.type = oauth2
+gravitino.eventListener.eventPublisher.auth.oauth2.tokenEndpoint = https://login.microsoftonline.com/<tenant>/oauth2/v2.0/token
+gravitino.eventListener.eventPublisher.auth.oauth2.clientId = <client-id>
+gravitino.eventListener.eventPublisher.auth.oauth2.clientSecret = <client-secret>
+gravitino.eventListener.eventPublisher.auth.oauth2.scope = api://<consumer-app-id>/.default
+
+# mTLS alternative:
+# gravitino.eventListener.eventPublisher.auth.type = mtls
+# gravitino.eventListener.eventPublisher.auth.mtls.keyStorePath = /etc/gravitino/certs/client.p12
+# gravitino.eventListener.eventPublisher.auth.mtls.keyStorePassword = <password>
+# gravitino.eventListener.eventPublisher.auth.mtls.trustStorePath = /etc/gravitino/certs/truststore.p12
+# gravitino.eventListener.eventPublisher.auth.mtls.trustStorePassword = <password>
+
+# Static bearer alternative (weakest; use only if the consumer accepts nothing else):
+# gravitino.eventListener.eventPublisher.auth.type = bearer
+# gravitino.eventListener.eventPublisher.auth.bearer.token = <token>
+
+# --- Arbitrary headers on every request --------------------------------------
+# Anything prefixed `header.` is sent verbatim.
+# gravitino.eventListener.eventPublisher.header.X-Tenant-Id = <tenant>
+
+# --- Subscription filter ------------------------------------------------------
+# Mutations only, by default. Without this, LOAD_TABLE and LIST_TABLE swamp the
+# consumer with read traffic it does not want.
+gravitino.eventListener.eventPublisher.operations = create_table,alter_table,drop_table,purge_table,create_schema,alter_schema,drop_schema
+
+# Publish events for operations that failed. Off by default: a failed CREATE
+# TABLE must not tell a downstream catalog that a table now exists.
+gravitino.eventListener.eventPublisher.includeFailures = false
+
+# --- Delivery -----------------------------------------------------------------
+gravitino.eventListener.eventPublisher.connectTimeoutMs = 5000
+gravitino.eventListener.eventPublisher.requestTimeoutMs = 10000
+gravitino.eventListener.eventPublisher.maxAttempts = 4
+gravitino.eventListener.eventPublisher.initialBackoffMs = 250
+gravitino.eventListener.eventPublisher.maxBackoffMs = 5000
+
+# --- Dispatcher ---------------------------------------------------------------
+# The plugin declares ASYNC_ISOLATED in code, so it gets its own queue and
+# dispatcher thread. Sizing that queue is what bounds the drop rate under load.
+gravitino.eventListener.eventPublisher.queueCapacity = 5000
+gravitino.eventListener.eventPublisher.dispatcherJoinSeconds = 30

@@ -1,0 +1,140 @@
+/*
+ * Copyright 2026 Datastrato Pvt Ltd.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+plugins {
+  id 'java'
+}
+
+group = 'com.datastrato.gravitino'
+version = '0.1.0'
+
+repositories {
+  mavenCentral()
+}
+
+ext {
+  // Verified against 1.2.0 and 1.3.0. The event listener API is identical across both, so the
+  // plugin builds and passes its smoke test on either with no source change.
+  //
+  //   ./gradlew build -PgravitinoVersion=1.2.0
+  //
+  gravitinoVersion = project.findProperty('gravitinoVersion') ?: '1.3.0'
+  jacksonVersion = '2.15.2'
+  slf4jVersion = '2.0.17'
+
+  // Optional: build against a local Gravitino installation instead of Maven Central.
+  //
+  //   ./gradlew build -PgravitinoHome=/opt/gravitino
+  //
+  // Useful when the machine has a Gravitino distribution to hand, when Maven Central is not
+  // reachable, or to compile against the exact jars the target server actually runs.
+  gravitinoHome = project.findProperty('gravitinoHome')
+  useLocalGravitino = gravitinoHome != null && file("${gravitinoHome}/libs").isDirectory()
+}
+
+// The Gravitino 1.x server runs on JDK 17, so the bytecode must target 17.
+//
+// options.release rather than a toolchain, deliberately. A toolchain would require a JDK 17 to be
+// installed and discoverable, and fails on a machine that only has a newer one. release compiles
+// 17-compatible bytecode from any JDK 17 or later, which is what a developer actually has.
+tasks.withType(JavaCompile).configureEach {
+  options.release = 17
+  options.encoding = 'UTF-8'
+}
+
+dependencies {
+  if (useLocalGravitino) {
+    logger.lifecycle("Building against the Gravitino distribution at ${gravitinoHome}")
+    // Every jar the server runs with. Compile against exactly what will be on the classpath.
+    //
+    // No slf4j-simple here. The distribution already ships an SLF4J binding (log4j-slf4j2-impl),
+    // and adding a second one produces the "multiple SLF4J providers" warning at runtime.
+    compileOnly fileTree(dir: "${gravitinoHome}/libs", include: ['*.jar'])
+    testImplementation fileTree(dir: "${gravitinoHome}/libs", include: ['*.jar'])
+  } else {
+    // Everything below is already on the Gravitino server classpath. Declared compileOnly so the
+    // published jar stays thin: no shading, no relocation, and no chance of colliding with the
+    // server's own copies or with a catalog plugin's.
+    compileOnly "org.apache.gravitino:gravitino-api:${gravitinoVersion}"
+    compileOnly "org.apache.gravitino:gravitino-core:${gravitinoVersion}"
+    compileOnly "org.apache.gravitino:gravitino-common:${gravitinoVersion}"
+    compileOnly "com.fasterxml.jackson.core:jackson-databind:${jacksonVersion}"
+    compileOnly "com.fasterxml.jackson.datatype:jackson-datatype-jsr310:${jacksonVersion}"
+    compileOnly "org.slf4j:slf4j-api:${slf4jVersion}"
+
+    // The smoke test stands up a real listener, so it needs the same libraries at runtime.
+    testImplementation "org.apache.gravitino:gravitino-api:${gravitinoVersion}"
+    testImplementation "org.apache.gravitino:gravitino-core:${gravitinoVersion}"
+    testImplementation "org.apache.gravitino:gravitino-common:${gravitinoVersion}"
+    testImplementation "com.fasterxml.jackson.core:jackson-databind:${jacksonVersion}"
+    testImplementation "com.fasterxml.jackson.datatype:jackson-datatype-jsr310:${jacksonVersion}"
+    testImplementation "org.slf4j:slf4j-api:${slf4jVersion}"
+    testRuntimeOnly "org.slf4j:slf4j-simple:${slf4jVersion}"
+  }
+
+  // The HTTP client is java.net.http, from the JDK. No dependency either way.
+}
+
+jar {
+  archiveBaseName = 'gravitino-event-publisher'
+  manifest {
+    attributes(
+      'Implementation-Title': 'Gravitino Event Publisher',
+      'Implementation-Version': project.version,
+      'Built-Against-Gravitino': gravitinoVersion
+    )
+  }
+}
+
+// The verification here is SmokeTest, which is a main() class rather than a JUnit test, so the
+// standard `test` task finds nothing to run. Gradle 9 treats that as a failure by default.
+//
+// Deliberate. The smoke test stands up a real HTTP receiver, fires real Gravitino event objects
+// through a real listener, and asserts on the bytes that cross the wire. Wrapping it in JUnit
+// would add a dependency and hide the output, which is the thing worth looking at.
+test {
+  failOnNoDiscoveredTests = false
+}
+
+// End-to-end smoke test. Stands up a real HTTP receiver on a loopback port, points a real
+// EventPublisherListener at it, fires real Gravitino event objects through onPostEvent, and
+// asserts on what arrives over the wire. No mocks.
+//
+//   ./gradlew smokeTest
+//   ./gradlew smokeTest -PgravitinoHome=/opt/gravitino
+tasks.register('smokeTest', JavaExec) {
+  description = 'Runs the plugin end to end against a live loopback HTTP receiver.'
+  group = 'verification'
+  classpath = sourceSets.test.runtimeClasspath
+  mainClass = 'com.datastrato.gravitino.eventpublisher.SmokeTest'
+}
+
+// Wire the smoke test into `check`, so `./gradlew build` actually proves the plugin works rather
+// than only proving it compiles.
+tasks.named('check') {
+  dependsOn 'smokeTest'
+}
+
+// Installs the jar into a Gravitino distribution.
+//
+//   ./gradlew install -PgravitinoHome=/opt/gravitino
+tasks.register('install', Copy) {
+  description = 'Copies the plugin jar into a Gravitino installation.'
+  group = 'distribution'
+  dependsOn jar
+  from jar.archiveFile
+  into "${project.findProperty('gravitinoHome') ?: '/opt/gravitino'}/libs"
+}

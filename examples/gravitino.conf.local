@@ -1,0 +1,26 @@
+# ---------------------------------------------------------------------------
+# Local try-it configuration.
+#
+# Pairs with examples/receiver.py. Append these lines to gravitino.conf,
+# start the receiver, restart Gravitino, and create a table.
+#
+# NOT a production configuration. It uses a static bearer token and plain HTTP
+# over loopback. See conf/gravitino.conf.sample for a real one.
+# ---------------------------------------------------------------------------
+
+gravitino.eventListener.names = eventPublisher
+gravitino.eventListener.eventPublisher.class = com.datastrato.gravitino.eventpublisher.EventPublisherListener
+
+gravitino.eventListener.eventPublisher.source = https://gravitino.local/dev
+gravitino.eventListener.eventPublisher.transport = http
+gravitino.eventListener.eventPublisher.url = http://127.0.0.1:9099/ingest
+
+# The plugin refuses a non-HTTPS endpoint unless this is set. It is set here
+# because the receiver is on loopback. Never set it in a deployed environment.
+gravitino.eventListener.eventPublisher.allowInsecureTransport = true
+
+gravitino.eventListener.eventPublisher.auth.type = bearer
+gravitino.eventListener.eventPublisher.auth.bearer.token = demo-token
+
+gravitino.eventListener.eventPublisher.operations = create_table,alter_table,drop_table
+gravitino.eventListener.eventPublisher.queueCapacity = 5000

@@ -1,0 +1,11 @@
+Gravitino Event Publisher
+Copyright 2026 Datastrato Pvt Ltd.
+
+Licensed under the Apache License, Version 2.0.
+
+This product is an independent example built against the Apache Gravitino
+event listener SPI. It is not part of Apache Gravitino and is not endorsed
+by the Apache Software Foundation.
+
+Apache, Apache Gravitino, and Gravitino are trademarks of the Apache
+Software Foundation.
