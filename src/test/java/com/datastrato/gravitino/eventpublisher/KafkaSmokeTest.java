@@ -196,6 +196,35 @@ public final class KafkaSmokeTest {
     check(failedCleanly, "bad password raises a delivery failure");
     check(elapsedMs < 15000, "failure arrives within the timeout (" + elapsedMs + " ms)");
 
+    // 5. Credentials read from a file through Kafka's FileConfigProvider, as from a mounted
+    //    Secret, so the password never appears in the server configuration.
+    java.nio.file.Path credentials = java.nio.file.Files.createTempFile("kafka-credentials", ".properties");
+    java.nio.file.Files.writeString(
+        credentials,
+        "jaas=org.apache.kafka.common.security.plain.PlainLoginModule required "
+            + "username=\"gravitino\" password=\"gravitino-secret\";\n");
+    Map<String, String> fromFile = new LinkedHashMap<>();
+    fromFile.put("bootstrapServers", BOOTSTRAP);
+    fromFile.put("topic", topic);
+    security.forEach((k, v) -> fromFile.put("kafka." + k, v));
+    fromFile.put("kafka.config.providers", "file");
+    fromFile.put(
+        "kafka.config.providers.file.class",
+        "org.apache.kafka.common.config.provider.FileConfigProvider");
+    fromFile.put("kafka.sasl.jaas.config", "${file:" + credentials + ":jaas}");
+    KafkaTransport fileTransport = new KafkaTransport();
+    boolean sentWithFileCredentials = false;
+    try {
+      fileTransport.init(fromFile);
+      fileTransport.send(probeEvent(), "{}".getBytes(StandardCharsets.UTF_8));
+      sentWithFileCredentials = true;
+    } catch (Exception e) {
+      System.out.println("  file credentials: " + rootCause(e));
+    } finally {
+      fileTransport.close();
+    }
+    check(sentWithFileCredentials, "credentials read from a file through FileConfigProvider");
+
     System.out.println(failures == 0 ? "\nALL CHECKS PASSED" : "\n" + failures + " CHECK(S) FAILED");
     System.exit(failures == 0 ? 0 : 1);
   }
