@@ -36,6 +36,7 @@ import org.apache.gravitino.listener.api.event.Event;
 import org.apache.gravitino.listener.api.event.OperationStatus;
 import com.datastrato.gravitino.eventpublisher.transport.EventTransport;
 import com.datastrato.gravitino.eventpublisher.transport.HttpTransport;
+import com.datastrato.gravitino.eventpublisher.transport.KafkaTransport;
 import com.datastrato.gravitino.eventpublisher.wire.CatalogEvent;
 import com.datastrato.gravitino.eventpublisher.wire.EventMapper;
 import org.slf4j.Logger;
@@ -128,16 +129,19 @@ public class EventPublisherListener implements EventListenerPlugin {
     this.includeFailures =
         Boolean.parseBoolean(properties.getOrDefault("includeFailures", "false"));
 
-    // Transport selection. Today, HTTP. The switch is where a Kafka or JDBC sink plugs in, and
-    // nothing above this line changes when one does.
+    // Transport selection. Every transport carries the same payload bytes, so nothing above this
+    // line changes with the destination.
     String transportType = properties.getOrDefault("transport", "http");
     switch (transportType.toLowerCase(Locale.ROOT)) {
       case "http":
         this.transport = new HttpTransport();
         break;
+      case "kafka":
+        this.transport = new KafkaTransport();
+        break;
       default:
         throw new IllegalArgumentException(
-            "unsupported transport: " + transportType + ". Supported: http.");
+            "unsupported transport: " + transportType + ". Supported: http, kafka.");
     }
     this.transport.init(properties);
 

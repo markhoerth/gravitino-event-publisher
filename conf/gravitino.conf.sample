@@ -25,7 +25,21 @@ gravitino.eventListener.eventPublisher.source = https://gravitino.example.intern
 gravitino.eventListener.eventPublisher.transport = http
 gravitino.eventListener.eventPublisher.url = https://business-catalog.example.internal/api/v1/ingest
 
-# --- Authentication (required) -----------------------------------------------
+# Kafka alternative. Every property under `kafka.` is passed to the producer
+# with the prefix removed. The connection must be SASL_SSL, or SSL with a client
+# keystore; the transport refuses PLAINTEXT and SASL_PLAINTEXT.
+# gravitino.eventListener.eventPublisher.transport = kafka
+# gravitino.eventListener.eventPublisher.bootstrapServers = broker-1.example.internal:9093,broker-2.example.internal:9093
+# gravitino.eventListener.eventPublisher.topic = gravitino-catalog-events
+# gravitino.eventListener.eventPublisher.kafka.security.protocol = SASL_SSL
+# gravitino.eventListener.eventPublisher.kafka.sasl.mechanism = SCRAM-SHA-512
+# gravitino.eventListener.eventPublisher.kafka.sasl.jaas.config = org.apache.kafka.common.security.scram.ScramLoginModule required username="<user>" password="<password>";
+# gravitino.eventListener.eventPublisher.kafka.ssl.truststore.location = /etc/gravitino/certs/kafka-truststore.p12
+# gravitino.eventListener.eventPublisher.kafka.ssl.truststore.type = PKCS12
+# gravitino.eventListener.eventPublisher.kafka.ssl.truststore.password = <password>
+# gravitino.eventListener.eventPublisher.deliveryTimeoutMs = 30000
+
+# --- Authentication (required for http) --------------------------------------
 # One of: oauth2, mtls, bearer. There is no unauthenticated mode.
 gravitino.eventListener.eventPublisher.auth.type = oauth2
 gravitino.eventListener.eventPublisher.auth.oauth2.tokenEndpoint = https://login.microsoftonline.com/<tenant>/oauth2/v2.0/token
