@@ -202,7 +202,8 @@ public final class KafkaSmokeTest {
     java.nio.file.Files.writeString(
         credentials,
         "jaas=org.apache.kafka.common.security.plain.PlainLoginModule required "
-            + "username=\"gravitino\" password=\"gravitino-secret\";\n");
+            + "username=\"gravitino\" password=\"gravitino-secret\";\n"
+            + "truststore_password=trustpass\n");
     Map<String, String> fromFile = new LinkedHashMap<>();
     fromFile.put("bootstrapServers", BOOTSTRAP);
     fromFile.put("topic", topic);
@@ -212,6 +213,7 @@ public final class KafkaSmokeTest {
         "kafka.config.providers.file.class",
         "org.apache.kafka.common.config.provider.FileConfigProvider");
     fromFile.put("kafka.sasl.jaas.config", "${file:" + credentials + ":jaas}");
+    fromFile.put("kafka.ssl.truststore.password", "${file:" + credentials + ":truststore_password}");
     KafkaTransport fileTransport = new KafkaTransport();
     boolean sentWithFileCredentials = false;
     try {
@@ -223,7 +225,7 @@ public final class KafkaSmokeTest {
     } finally {
       fileTransport.close();
     }
-    check(sentWithFileCredentials, "credentials read from a file through FileConfigProvider");
+    check(sentWithFileCredentials, "SASL credentials and truststore password read from a file through FileConfigProvider");
 
     System.out.println(failures == 0 ? "\nALL CHECKS PASSED" : "\n" + failures + " CHECK(S) FAILED");
     System.exit(failures == 0 ? 0 : 1);
