@@ -81,5 +81,7 @@ gravitino.eventListener.eventPublisher.maxBackoffMs = 5000
 # --- Dispatcher ---------------------------------------------------------------
 # The plugin declares ASYNC_ISOLATED in code, so it gets its own queue and
 # dispatcher thread. Sizing that queue is what bounds the drop rate under load.
-gravitino.eventListener.eventPublisher.queueCapacity = 5000
-gravitino.eventListener.eventPublisher.dispatcherJoinSeconds = 30
+# Queue settings are server-wide: the server reads them only at these keys and
+# applies them to every asynchronous listener's queue.
+gravitino.eventListener.queueCapacity = 5000
+gravitino.eventListener.dispatcherJoinSeconds = 30
